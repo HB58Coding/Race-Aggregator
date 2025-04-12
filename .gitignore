@@ -1,3 +1,5 @@
 # .gitignore
 .env
 .DS_Store
+# FastF1 cache
+frontend/fastf1Cache
