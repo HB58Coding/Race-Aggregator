@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  race_simulator:
+    build:
+      context: ./simulator
+    environment:
+      - DB_PATH=${DB_PATH}
+      - HOST_DB_PATH=${HOST_DB_PATH}
+    volumes:
+      - ./simulator:/app
+    ports:
+      - "5000:5000"
+  
+  race_backend:
+    build:
+      context: ./backend
+    environment:
+      - DB_PATH=${DB_PATH}
+      - HOST_DB_PATH=${HOST_DB_PATH}
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+
+  race_frontend:
+    build:
+      context: ./frontend
+    environment:
+      - DB_PATH=${DB_PATH}
+      - HOST_DB_PATH=${HOST_DB_PATH}
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "8501:8501"
