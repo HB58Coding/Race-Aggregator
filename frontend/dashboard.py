@@ -5,6 +5,7 @@ import sqlite3
 import fastf1
 from fastf1.core import Laps
 from streamlit_autorefresh import st_autorefresh
+import time
 
 # --------------------------
 # 🗂️ Setup FastF1 cache
@@ -44,74 +45,81 @@ st.title("🏎️ Live Race Telemetry Dashboard")
 available_years = list(range(2018, 2025))  # Up to 2024
 selected_year = st.sidebar.selectbox("📅 Select Year", available_years[::-1])
 
-try:
-    # Get the schedule and races
-    schedule = fastf1.get_event_schedule(selected_year)
-    race_schedule = schedule[schedule['EventFormat'] == 'race'][['RoundNumber', 'EventName']]
+# --------------------------
+# Fetch and Handle FastF1 Data
+# --------------------------
 
-    # Map for dropdown
-    race_name_map = {
-        f"Round {row.RoundNumber}: {row.EventName}": row.RoundNumber
-        for _, row in race_schedule.iterrows()
-    }
-
-    race_label = st.sidebar.selectbox("🏁 Select Race", list(race_name_map.keys()))
-    round_number = race_name_map[race_label]
-
-    # Fetch the event and session
-    event = fastf1.get_event(selected_year, round_number)
-    if event is None:
-        st.error("❌ Failed to fetch event. Try a different race or check your internet.")
-        st.stop()
-
+def fetch_race_data():
     try:
-        session = event.get_race()
+        # Get the schedule and races
+        schedule = fastf1.get_event_schedule(selected_year)
+        st.write(f"Schedule fetched: {schedule}")  # Debugging: Log the fetched schedule
+
+        race_schedule = schedule[schedule['EventFormat'] == 'race'][['RoundNumber', 'EventName']]
+
+        # Map for dropdown
+        race_name_map = {
+            f"Round {row.RoundNumber}: {row.EventName}": row.RoundNumber
+            for _, row in race_schedule.iterrows()
+        }
+
+        race_label = st.sidebar.selectbox("🏁 Select Race", list(race_name_map.keys()))
+        round_number = race_name_map[race_label]
+
+        # Fetch the event and session
+        event = fastf1.get_event(selected_year, round_number)
+        if event is None:
+            st.error("❌ Failed to fetch event. Try a different race or check your internet.")
+            st.stop()
+
+        try:
+            session = event.get_race()
+        except Exception as e:
+            st.error(f"❌ Could not get race session: {e}")
+            st.stop()
+
+        try:
+            session.load(laps=True, telemetry=True)
+        except Exception as e:
+            st.error(f"❌ Failed to load race data: {e}")
+            st.stop()
+
+        all_drivers = session.drivers
+        if not all_drivers:
+            st.warning("⚠️ No drivers found for this race yet. It may not have started.")
+
+        driver_map = {session.get_driver(driver)["FullName"]: driver for driver in all_drivers}
+        selected_driver_name = st.sidebar.selectbox("🚗 Select Driver", list(driver_map.keys()))
+        selected_driver = driver_map[selected_driver_name]
+
+        st.subheader(f"📊 Live Stats for {selected_driver_name} in {event['EventName']} {selected_year}")
+
+        driver_laps: Laps = session.laps.pick_driver(selected_driver).pick_quicklaps()
+
+        if driver_laps.empty:
+            st.warning("No telemetry data available yet for this driver.")
+        else:
+            fastest_lap = driver_laps.pick_fastest()
+            telemetry = fastest_lap.get_car_data()
+
+            # Metrics
+            st.metric("Speed (top)", f"{telemetry['Speed'].max()} km/h")
+            st.metric("RPM (top)", f"{telemetry['RPM'].max()}")
+            st.metric("Lap Time", f"{fastest_lap['LapTime']}")
+            st.metric("Gear", f"{telemetry['nGear'].max()}")
+
+            # Charts
+            st.subheader("📈 Speed Over Distance")
+            st.line_chart(telemetry.set_index('Distance')['Speed'])
+
+            st.subheader("📉 RPM Over Distance")
+            st.line_chart(telemetry.set_index('Distance')['RPM'])
+
+            st.subheader("⚙️ Gear Shifts Over Distance")
+            st.line_chart(telemetry.set_index('Distance')['nGear'])
+
     except Exception as e:
-        st.error(f"❌ Could not get race session: {e}")
-        st.stop()
-
-    try:
-        session.load(laps=True, telemetry=True)
-    except Exception as e:
-        st.error(f"❌ Failed to load race data: {e}")
-        st.stop()
-
-    all_drivers = session.drivers
-    if not all_drivers:
-        st.warning("⚠️ No drivers found for this race yet. It may not have started.")
-
-    driver_map = {session.get_driver(driver)["FullName"]: driver for driver in all_drivers}
-    selected_driver_name = st.sidebar.selectbox("🚗 Select Driver", list(driver_map.keys()))
-    selected_driver = driver_map[selected_driver_name]
-
-    st.subheader(f"📊 Live Stats for {selected_driver_name} in {event['EventName']} {selected_year}")
-
-    driver_laps: Laps = session.laps.pick_driver(selected_driver).pick_quicklaps()
-
-    if driver_laps.empty:
-        st.warning("No telemetry data available yet for this driver.")
-    else:
-        fastest_lap = driver_laps.pick_fastest()
-        telemetry = fastest_lap.get_car_data()
-
-        # Metrics
-        st.metric("Speed (top)", f"{telemetry['Speed'].max()} km/h")
-        st.metric("RPM (top)", f"{telemetry['RPM'].max()}")
-        st.metric("Lap Time", f"{fastest_lap['LapTime']}")
-        st.metric("Gear", f"{telemetry['nGear'].max()}")
-
-        # Charts
-        st.subheader("📈 Speed Over Distance")
-        st.line_chart(telemetry.set_index('Distance')['Speed'])
-
-        st.subheader("📉 RPM Over Distance")
-        st.line_chart(telemetry.set_index('Distance')['RPM'])
-
-        st.subheader("⚙️ Gear Shifts Over Distance")
-        st.line_chart(telemetry.set_index('Distance')['nGear'])
-
-except Exception as e:
-    st.error(f"💥 Unexpected error while loading FastF1 data: {e}")
+        st.error(f" Unexpected error while loading FastF1 data: {e}")
 
 # --------------------------
 # 🧠 SQLite Live Telemetry (Sim Data)
@@ -174,3 +182,6 @@ if not df.empty:
 
     st.subheader("🌍 GPS Position (Sim, Last 20)")
     st.map(df[['latitude', 'longitude']].head(20))
+
+# Fetch the race data
+fetch_race_data()

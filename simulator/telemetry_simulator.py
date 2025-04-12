@@ -4,6 +4,20 @@ import time
 import asyncio
 import websockets
 
+import fastf1
+import logging
+
+fastf1.Cache.enable_cache('/app/.fastf1_cache')
+logging.basicConfig(level=logging.DEBUG)
+
+
+try:
+    session = fastf1.get_session(2023, 1, 'FP1')
+    session.load()
+except Exception as e:
+    print(f"Error loading FastF1 data: {e}")
+
+
 def generate_telemetry():
     return {
         "car_id": random.randint(1, 5),
