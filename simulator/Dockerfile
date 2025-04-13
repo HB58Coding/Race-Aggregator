@@ -9,4 +9,6 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 EXPOSE 5000
 
+RUN mkdir -p /app/.fastf1_cache
+
 CMD ["python", "/app/telemetry_simulator.py"]
