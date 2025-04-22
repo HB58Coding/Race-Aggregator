@@ -2,7 +2,7 @@
 
 A telemetry dashboard for live and simulated motorsport data, built with FastAPI, Streamlit, and FastF1.
 
-## ✨ Features
+## Features
 - FastF1 data fetching with caching
 - Real-time telemetry simulation
 - WebSocket streaming
@@ -12,7 +12,7 @@ A telemetry dashboard for live and simulated motorsport data, built with FastAPI
 
 ---
 
-## 🧵 Project Structure
+## Project Structure
 ```
 race-aggregator/
 ├── backend/
@@ -38,7 +38,7 @@ race-aggregator/
 
 ---
 
-## 🚀 Quick Start (Docker)
+## Quick Start (Docker)
 
 ### 1. Clone the repository
 ```bash
@@ -62,7 +62,7 @@ docker-compose up --build
 
 ---
 
-## 🎓 For Development (Manual Run)
+## For Development (Manual Run)
 
 ### Setup a virtual environment
 ```bash
@@ -95,14 +95,14 @@ streamlit run dashboard.py
 
 ---
 
-## 💡 Notes
+## Notes
 - WebSocket simulator connects to: `ws://localhost:8000/ws/telemetry`
 - FastF1 data is cached in `fastf1_cache/`
 - All telemetry data is stored in `telemetry.db`
 
 ---
 
-## 🚧 Environment Variables (Optional)
+## Environment Variables (Optional)
 Set in `.env` or Docker Compose:
 ```
 DB_PATH=/app/telemetry.db
@@ -111,7 +111,7 @@ HOST_DB_PATH=./telemetry.db
 
 ---
 
-## 🚜 Future Improvements
+## Future Improvements
 - Add driver/car selection to simulator
 - Historical data comparison
 - Session type and year selection from dashboard
